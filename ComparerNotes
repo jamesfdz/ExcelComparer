@@ -1,0 +1,926 @@
+AdvancedWorkbook
+package compare.excel;
+
+public class AdvancedWorkbook {
+	public AdvancedWorkbook() {
+		System.out.println("_sheets initial size ==> " + super._sheets.size());
+	}
+	
+	public AdvancedWorkbook(InputStream s) throws IOException {
+		super(s);
+		// TODO Auto-generated constructor stub
+		}
+		  
+		public void addSheet(HSSFSheet sheet){
+		System.out.println(" b4 add _sheets size ==> " + super._sheets.size());
+		_sheets.add(sheet);
+		System.out.println(" after add _sheets size ==> " + super._sheets.size());
+		}
+}
+
+
+
+HSSFWorkbook book1 = null;
+HSSFWorkbook book2 = null;
+HSSFSheet sheet1 = null;
+HSSFSheet sheet2 = null;
+  
+try {
+book1 = new HSSFWorkbook(new FileInputStream(
+"C:\\Users\\fernajam\\Downloads\\Canon_Automation_Request\\TM-200,205_Specification Sheet_ for BTL.xlsx"));
+    sheet1 = book1.getSheetAt(0);
+  
+    book2 = new HSSFWorkbook(new FileInputStream(
+                       "C:\\Users\\fernajam\\Downloads\\Canon_Automation_Request\\TM-300,305_Specification Sheet_ for BTL.xlsx"));
+    sheet2 = book2.getSheetAt(0);
+    
+        try {
+        AdvancedWorkbook mergedBook = new AdvancedWorkbook();
+         
+        mergedBook.addSheet(sheet1);
+        mergedBook.setSheetName(0, book1.getSheetName(0));
+  
+        mergedBook.addSheet(sheet2);
+       mergedBook.setSheetName(1, book2.getSheetName(0));
+  
+        FileOutputStream fileOut = new FileOutputStream(
+        "..\\src\\com\\utilities\\excel\\Merged.xls"        ,false);
+        mergedBook.write(fileOut);
+        fileOut.close();
+  
+        System.out.println("Merged file has been created succesfully");
+         } catch ( Exception ex ) {
+         ex.printStackTrace();
+         }
+} catch (FileNotFoundException e) {
+System.out.println("==> File Not found");
+} catch (IOException e) {
+System.out.println("==> IO Exception");
+}
+}
+
+**********************************Previous Code*****************************************
+		
+		//Create Blank workbook
+	    XSSFWorkbook workbook = new XSSFWorkbook(); 
+	
+	    //Create file system using specific name
+	    FileOutputStream out = new FileOutputStream(new File("comparedFile.xlsx"));
+	
+	    //write operation workbook using file out object 
+	    workbook.write(out);
+	    out.close();
+	    System.out.println("createworkbook.xlsx written successfully");
+		
+		
+		
+//		FileInputStream fileInputStream = new FileInputStream(excelSheetsFilePath[0]);
+//		
+//		
+//		 try (FileInputStream fileInputStream = new FileInputStream(excelSheetsFilePath[0]);
+//				 XSSFWorkbook inputWorkbook = new XSSFWorkbook(fileInputStream)) {
+//		        Sheet sheet1 = workbook.getSheetAt(0);
+//		        Sheet sheet2 = workbook.getSheetAt(1);
+//		        Iterator<Row> rowIterator1 = sheet1.iterator();
+//		        Iterator<Row> rowIterator2 = sheet2.iterator();
+//		        while (rowIterator1.hasNext() && rowIterator2.hasNext()) {
+//		            Row currentRow1 = rowIterator1.next();
+//		            Row currentRow2 = rowIterator2.next();
+//		            Iterator<Cell> cellIterartor1 = currentRow1.iterator();
+//		            Iterator<Cell> cellIterator2 = currentRow2.iterator();
+//		            while (cellIterartor1.hasNext() && cellIterator2.hasnext()) {
+//		                Cell currentCell1 = cellIterartor1.next();
+//		                Cell currentCell2 = cellIterartor2.next();
+//		                     //logic to compare values
+//		            }
+//		        }
+//
+//		    } catch (IOException e) {
+//		        e.printStackTrace();
+//		    }
+
+
+26 Feb:
+
+	- Merge Excel Source - https://gist.github.com/davidsommer/7805574
+	- Compare Code Source - https://svn.apache.org/repos/asf/poi/trunk/src/examples/src/org/apache/poi/ss/examples/ExcelComparator.java
+
+	- Files provided are getting merged properly but the sheet combined are the last sheets from both the files
+		This is because of using for each and b.createSheet() which creates sheet with file name so check that once.
+	- After combining all excel sheets, compare all the sheets and provide output in another excel with all the common fields
+	
+28 Feb:
+	
+	
+***********************************************************Code********************************************************************
+
+package compare.excel;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+public class runComparer {
+	
+	public runComparer() {}
+
+	
+	//method to compare all excel file and excel sheets within them with each other
+	public void compare(File[] excelSheetsFilePath) throws IOException {
+		
+		XSSFWorkbook book = new XSSFWorkbook(new FileInputStream("output.xlsx"));
+				
+		for(File filePath : excelSheetsFilePath) {
+			
+			FileInputStream fIP = new FileInputStream(filePath);
+			XSSFWorkbook b = new XSSFWorkbook(fIP);
+			
+			System.out.println(filePath+": "+b.getNumberOfSheets());
+			
+			for (int i = 0; i < b.getNumberOfSheets(); i++) {
+				System.out.println(filePath+": "+b.getSheetName(i));
+				XSSFSheet sheet = book.createSheet(b.getSheetName(i));
+				copySheets(book, sheet, b.getSheetAt(i));
+			}
+		}
+		
+		XSSFSheet sheet_1 = book.getSheetAt(0);
+		
+		if(sheet_1 != null) {
+			int index = book.getSheetIndex(sheet_1);
+			book.removeSheetAt(index);
+		}
+		
+		FileOutputStream out = new FileOutputStream(new File("combinedFile.xlsx"));
+		
+	    //write operation workbook using file out object
+		book.write(out);
+	    out.close();
+	    System.out.println("combinedFile.xlsx written successfully");
+		
+	    List<String> listOfEqualContent = new ArrayList<>();
+	    
+	    XSSFWorkbook workbook_compare = new XSSFWorkbook(new FileInputStream("combinedFile.xlsx"));
+	    
+	    XSSFSheet mainSheet = workbook_compare.getSheetAt(0);
+	    XSSFSheet checkSheet = null;
+	    
+	    for(int z = 1; z < workbook_compare.getNumberOfSheets(); z++) {
+	    	checkSheet = workbook_compare.getSheetAt(z);
+	    	compareDataInBothSheets(mainSheet, checkSheet);
+	    }
+	    
+	}
+
+	
+	private void compareDataInBothSheets(XSSFSheet srcSheetMain, XSSFSheet destSheetToCompare) throws FileNotFoundException {
+
+		int maxRowNumberSrc = srcSheetMain.getLastRowNum() + 1;
+		int maxRowNumberDest = destSheetToCompare.getLastRowNum()+1;
+		
+		for(int y = srcSheetMain.getFirstRowNum(); y <= maxRowNumberSrc; y++) {
+			//getting rows from src and destination
+			XSSFRow srcRowMain = srcSheetMain.getRow(y);
+//			XSSFRow destRowToCompare = destSheetToCompare.getRow(y);
+			
+			if(srcRowMain != null) {
+				int firstCellNum = srcRowMain.getFirstCellNum();
+				int lastCellNum = srcRowMain.getLastCellNum();
+				
+				if(lastCellNum != -1) {
+					for(int c = srcRowMain.getFirstCellNum(); c <= srcRowMain.getLastCellNum(); c++) {
+						XSSFCell srcCell = srcRowMain.getCell(c);
+						XSSFCell destCell =  destRowToCompare.getCell(c);
+						if(srcCell != null && destCell != null) {
+							compareBothCells(srcCell, destCell);
+						}
+						
+					}
+				}
+			}
+		}
+	}
+
+
+	private void compareBothCells(XSSFCell srcCell, XSSFCell destCell) throws FileNotFoundException {
+		String srcCellContent = srcCell.getStringCellValue();
+		String destCellContent = destCell.getStringCellValue();
+		
+		if(srcCellContent.equals(destCellContent)) {
+			System.out.println(srcCellContent+" is Equal to "+destCellContent);
+		}else {
+			System.out.println(srcCellContent+" is NOT Equal to "+destCellContent);
+		}
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet) {
+		copySheets(book, sheet, xssfSheet, true);
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet, boolean copyStyle) {
+		int newRownumber = sheet.getLastRowNum() + 1;
+		int maxColumnNum = 0; 
+		Map<Integer, XSSFCellStyle> styleMap = (copyStyle) ? new HashMap<Integer, XSSFCellStyle>() : null;
+		
+		for (int i = xssfSheet.getFirstRowNum(); i <= xssfSheet.getLastRowNum(); i++) {     
+	      XSSFRow srcRow = xssfSheet.getRow(i);     
+	      XSSFRow destRow = sheet.createRow(i + newRownumber);     
+	      if (srcRow != null) {     
+	        copyRow(book, xssfSheet, sheet, srcRow, destRow, styleMap);     
+	        if (srcRow.getLastCellNum() > maxColumnNum) {     
+	            maxColumnNum = srcRow.getLastCellNum();     
+	        }     
+	      }     
+	    }
+		
+		for (int i = 0; i <= maxColumnNum; i++) {     
+	      sheet.setColumnWidth(i, xssfSheet.getColumnWidth(i));     
+	    }
+		
+	}
+
+
+	private static void copyRow(XSSFWorkbook book, XSSFSheet xssfSheet, XSSFSheet sheet, XSSFRow srcRow,
+			XSSFRow destRow, Map<Integer, XSSFCellStyle> styleMap) {
+		destRow.setHeight(srcRow.getHeight());
+		for (int j = srcRow.getFirstCellNum(); j <= srcRow.getLastCellNum(); j++) {     
+	      XSSFCell oldCell = srcRow.getCell(j);
+	      XSSFCell newCell = destRow.getCell(j);
+	      if (oldCell != null) {     
+	        if (newCell == null) {     
+	          newCell = destRow.createCell(j);     
+	        }     
+	        copyCell(book, oldCell, newCell, styleMap);
+	      }     
+	    }
+	}
+
+
+	@SuppressWarnings("deprecation")
+	private static void copyCell(XSSFWorkbook book, XSSFCell oldCell, XSSFCell newCell,
+			Map<Integer, XSSFCellStyle> styleMap) {
+		if(styleMap != null) {     
+	      int stHashCode = oldCell.getCellStyle().hashCode();     
+	      XSSFCellStyle newCellStyle = styleMap.get(stHashCode);     
+	      if(newCellStyle == null){     
+	        newCellStyle = book.createCellStyle();     
+	        newCellStyle.cloneStyleFrom(oldCell.getCellStyle());     
+	        styleMap.put(stHashCode, newCellStyle);     
+	      }     
+	      newCell.setCellStyle(newCellStyle);   
+	    }
+		
+		switch(oldCell.getCellType()) {     
+		    case XSSFCell.CELL_TYPE_STRING:     
+		      newCell.setCellValue(oldCell.getRichStringCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_NUMERIC:     
+		      newCell.setCellValue(oldCell.getNumericCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BLANK:     
+		      newCell.setCellType(XSSFCell.CELL_TYPE_BLANK);     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BOOLEAN:     
+		      newCell.setCellValue(oldCell.getBooleanCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_ERROR:     
+		      newCell.setCellErrorValue(oldCell.getErrorCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_FORMULA:     
+		      newCell.setCellFormula(oldCell.getCellFormula());     
+		      break;     
+		    default:     
+		      break;     
+		  }
+		
+	}
+
+}
+
+*********************************************************Code End**************************************************************
+
+1 March:
+	XSSFWorkbook finalWorkbook = new XSSFWorkbook(new FileInputStream("comparedOutput.xlsx"));
+		
+		XSSFSheet final_sheet = finalWorkbook.getSheetAt(0);
+		
+		XSSFRow srcSheet_final_row = final_sheet.getRow(0);
+		XSSFCell srcSheet_final_cell = srcSheet_final_row.getCell(0);
+		
+		srcSheet_final_cell.setCellValue(mainSheet.getSheetName());
+		
+2 March:
+
+**************************************************************Latest Working Code******************************************************
+
+package compare.excel;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+public class runComparer {
+	
+	public runComparer() {}
+
+	
+	//method to compare all excel file and excel sheets within them with each other
+	public void compare(File[] excelSheetsFilePath) throws IOException {
+		
+		int header_cell_count = 1;
+				
+		XSSFWorkbook final_workbook = new XSSFWorkbook(new FileInputStream("compared_output.xlsx"));
+	    XSSFSheet final_sheet = final_workbook.getSheet("Sheet1");
+	    final_sheet.createRow(0);
+		
+		XSSFWorkbook book = new XSSFWorkbook(new FileInputStream("output.xlsx"));
+				
+		for(File filePath : excelSheetsFilePath) {
+			
+			FileInputStream fIP = new FileInputStream(filePath);
+			XSSFWorkbook b = new XSSFWorkbook(fIP);
+			
+			System.out.println(filePath+": "+b.getNumberOfSheets());
+			
+			for (int i = 0; i < b.getNumberOfSheets(); i++) {
+				System.out.println(filePath+": "+b.getSheetName(i));
+				XSSFSheet sheet = book.createSheet(b.getSheetName(i));
+				copySheets(book, sheet, b.getSheetAt(i));
+			}
+		}
+		
+		XSSFSheet sheet_1 = book.getSheetAt(0);
+		
+		if(sheet_1 != null) {
+			int index = book.getSheetIndex(sheet_1);
+			book.removeSheetAt(index);
+		}
+		
+		FileOutputStream out = new FileOutputStream(new File("combinedFile.xlsx"));
+		
+	    //write operation workbook using file out object
+		book.write(out);
+	    out.close();
+	    book.close();
+	    
+	    System.out.println("combinedFile.xlsx written successfully");
+	    
+	    System.out.println("Starting to compare the sheets");
+	    
+	    XSSFWorkbook workbook_compare = new XSSFWorkbook(new FileInputStream("combinedFile.xlsx"));
+	    
+	    XSSFSheet mainSheet = workbook_compare.getSheetAt(0);
+	    XSSFSheet checkSheet = null;
+	    String mainSheetName = mainSheet.getSheetName();
+	    
+	    for(int z = 1; z < workbook_compare.getNumberOfSheets(); z++) {
+	    	checkSheet = workbook_compare.getSheetAt(z);
+	    	compareDataInBothSheets(mainSheet, checkSheet, header_cell_count, final_sheet);
+	    	header_cell_count++;
+	    }
+		
+	    workbook_compare.close();
+	    
+	    System.out.println("Compare finish");
+	    
+	    System.out.println("starting to write main sheet name in comparedOutput.xlsx");
+	    
+	    
+	    Cell mainSheetCell = final_sheet.getRow(0).createCell(0);
+	    mainSheetCell.setCellValue(mainSheetName);
+	    FileOutputStream final_out = new FileOutputStream(new File("compared_output.xlsx"));
+	    final_workbook.write(final_out);
+	    final_out.close();
+	    final_workbook.close();
+	    System.out.println("completed finally");
+	    
+	}
+
+	
+	private void compareDataInBothSheets(XSSFSheet srcSheetMain, XSSFSheet destSheetToCompare, int header_cell_count, XSSFSheet final_sheet) throws IOException {
+		
+		int header_row_count = 0;
+		Cell header_cell = final_sheet.getRow(header_row_count).createCell(header_cell_count);
+		header_cell.setCellValue(destSheetToCompare.getSheetName());
+		
+		
+		int maxRowNumberSrc = srcSheetMain.getLastRowNum() + 1;
+		int srcContent_row_count = 1;
+				
+		for(int y = srcSheetMain.getFirstRowNum(); y <= maxRowNumberSrc; y++) {
+			//getting rows from src and destination
+			XSSFRow srcRowMain = srcSheetMain.getRow(y);
+						
+			if(srcRowMain != null) {
+				int firstCellNum = srcRowMain.getFirstCellNum();
+				int lastCellNum = srcRowMain.getLastCellNum();
+				
+				if(lastCellNum != -1) {
+					for(int c = firstCellNum; c <= lastCellNum; c++) {
+						XSSFCell srcCell = srcRowMain.getCell(c);
+						if(srcCell != null && srcCell.getStringCellValue() != "") {
+							String srcCellContent = srcCell.getStringCellValue();
+							//paste the cell content in first row
+							Cell src_cell = final_sheet.createRow(srcContent_row_count).createCell(0);
+							src_cell.setCellValue(srcCellContent);
+							srcContent_row_count++;
+							checkContentInDestSheets(srcCellContent, destSheetToCompare, srcSheetMain, final_sheet);
+						}						
+					}
+				}
+			}
+			
+		}
+	}
+
+
+	private void checkContentInDestSheets(String srcCellContent, XSSFSheet destSheetToCompare, XSSFSheet srcSheetMain, XSSFSheet final_sheet) throws FileNotFoundException, IOException {
+		int maxRowNumberDest = destSheetToCompare.getLastRowNum()+1;
+		int dest_row_count = 1;
+		
+		for(int t = destSheetToCompare.getFirstRowNum(); t <= maxRowNumberDest; t++) {
+			XSSFRow destRowToCompare = destSheetToCompare.getRow(t);
+			
+			if(destRowToCompare != null) {
+				int firstCellDest = destRowToCompare.getFirstCellNum();
+				int lastCellNumDest = destRowToCompare.getLastCellNum();
+				
+				if(lastCellNumDest != -1) {
+					for(int b = firstCellDest; b <= lastCellNumDest; b++) {						
+						XSSFCell destCell = destRowToCompare.getCell(b);
+						if(destCell != null) {
+							String destCellContent = destCell.getStringCellValue();
+							if(srcCellContent.equals(destCellContent)) {
+								int first_row_number = final_sheet.getFirstRowNum();
+								int last_row_number = final_sheet.getLastRowNum()+1;
+								for(int q = first_row_number; q <= last_row_number; q++) {
+									XSSFRow finalRow = final_sheet.getRow(q);
+									if(finalRow != null) {
+										int first_cell_number = finalRow.getFirstCellNum();
+										int last_cell_number = finalRow.getLastCellNum();
+										for(int w = first_cell_number; w <= last_cell_number; w++) {
+											if(last_cell_number != -1) {
+												XSSFCell finalCell = finalRow.getCell(w);
+												if(finalCell != null) {
+													String cell_content = finalCell.getStringCellValue();
+													String destSheetName = destSheetToCompare.getSheetName();
+													if(destSheetToCompare.getSheetName().equals(cell_content)) {
+														int column_index = finalCell.getColumnIndex();
+														//pasting the answer 1 or 0 in respective sheet name
+														Cell final_cell = final_sheet.getRow(dest_row_count).createCell(column_index);
+														final_cell.setCellValue("1");
+														dest_row_count++;
+													}
+												}
+											}
+										}
+									}
+								}
+							}else {
+								int first_row_number = final_sheet.getFirstRowNum();
+								int last_row_number = final_sheet.getLastRowNum()+1;
+								for(int q = first_row_number; q <= last_row_number; q++) {
+									XSSFRow finalRow = final_sheet.getRow(q);
+									if(finalRow != null) {
+										int first_cell_number = finalRow.getFirstCellNum();
+										int last_cell_number = finalRow.getLastCellNum();
+										for(int w = first_cell_number; w <= last_cell_number; w++) {
+											if(last_cell_number != -1) {
+												XSSFCell finalCell = finalRow.getCell(w);
+												if(finalCell != null) {
+													String cell_content = finalCell.getStringCellValue();
+													if(destSheetToCompare.getSheetName().equals(cell_content)) {
+														int column_index = finalCell.getColumnIndex();
+														//pasting the answer 1 or 0 in respective sheet name
+														Cell final_cell = final_sheet.getRow(dest_row_count).createCell(column_index);
+														final_cell.setCellValue("0");
+														dest_row_count++;
+													}
+												}
+											}
+										}
+									}
+								}
+							}						
+						}
+					}
+				}
+			}
+		}
+		
+	}
+
+
+	private void generateOutput(String srcCellContent,String destCellContent, XSSFSheet destSheetToCompare, XSSFSheet srcSheetMain) throws FileNotFoundException, IOException {
+		XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream("compared_output.xlsx"));
+		
+		XSSFSheet worksheet = workbook.getSheet("Sheet1");
+		
+		int lastRowOfSrcSheet = srcSheetMain.getLastRowNum()+1;
+		
+		for(int i = srcSheetMain.getFirstRowNum(); i <= lastRowOfSrcSheet; i++) {
+			Cell srcContent = null;
+			srcContent = worksheet.createRow(i).createCell(0);
+			srcContent.setCellValue(srcCellContent);
+		}
+		
+		FileOutputStream output_srcContents = new FileOutputStream(new File("compared_output.xlsx"));
+		workbook.write(output_srcContents);
+		output_srcContents.close();
+		workbook.close();
+	    System.out.println("added all source content");
+		
+//		if(srcCellContent.equals(destCellContent)) {
+//			String destSheetName = destSheetToCompare.getSheetName();
+//			Row row = destSheetToCompare.getRow(0);
+//			int cell_no_to_put_dest = 0;
+//			Cell find_cell = row.getCell(cell_no_to_put_dest);
+//			String found_cell_string = find_cell.getStringCellValue();
+//			cell_no_to_put_dest++;
+//			if(destSheetName.equals(found_cell_string)) {
+//				int get_cell_const = find_cell.getColumnIndex();
+//				int get_row = 1;
+//				Row row2 = destSheetToCompare.getRow(get_row);
+//				Cell cell2 = row2.getCell(get_cell_const);
+//				cell2.setCellValue("1");
+//				get_row++;
+//				
+//				FileOutputStream output = new FileOutputStream(new File("comparedOutput.xlsx"));
+//				workbook.write(output);
+//				output.close();
+//				System.out.println("Finally");
+//			}
+//			
+//		}
+		
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet) {
+		copySheets(book, sheet, xssfSheet, true);
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet, boolean copyStyle) {
+		int newRownumber = sheet.getLastRowNum() + 1;
+		int maxColumnNum = 0; 
+		Map<Integer, XSSFCellStyle> styleMap = (copyStyle) ? new HashMap<Integer, XSSFCellStyle>() : null;
+		
+		for (int i = xssfSheet.getFirstRowNum(); i <= xssfSheet.getLastRowNum(); i++) {     
+	      XSSFRow srcRow = xssfSheet.getRow(i);     
+	      XSSFRow destRow = sheet.createRow(i + newRownumber);     
+	      if (srcRow != null) {     
+	        copyRow(book, xssfSheet, sheet, srcRow, destRow, styleMap);     
+	        if (srcRow.getLastCellNum() > maxColumnNum) {     
+	            maxColumnNum = srcRow.getLastCellNum();     
+	        }     
+	      }     
+	    }
+		
+		for (int i = 0; i <= maxColumnNum; i++) {     
+	      sheet.setColumnWidth(i, xssfSheet.getColumnWidth(i));     
+	    }
+		
+	}
+
+
+	private static void copyRow(XSSFWorkbook book, XSSFSheet xssfSheet, XSSFSheet sheet, XSSFRow srcRow,
+			XSSFRow destRow, Map<Integer, XSSFCellStyle> styleMap) {
+		destRow.setHeight(srcRow.getHeight());
+		for (int j = srcRow.getFirstCellNum(); j <= srcRow.getLastCellNum(); j++) {     
+	      XSSFCell oldCell = srcRow.getCell(j);
+	      XSSFCell newCell = destRow.getCell(j);
+	      if (oldCell != null) {     
+	        if (newCell == null) {     
+	          newCell = destRow.createCell(j);     
+	        }     
+	        copyCell(book, oldCell, newCell, styleMap);
+	      }     
+	    }
+	}
+
+
+	@SuppressWarnings("deprecation")
+	private static void copyCell(XSSFWorkbook book, XSSFCell oldCell, XSSFCell newCell,
+			Map<Integer, XSSFCellStyle> styleMap) {
+		if(styleMap != null) {     
+	      int stHashCode = oldCell.getCellStyle().hashCode();     
+	      XSSFCellStyle newCellStyle = styleMap.get(stHashCode);     
+	      if(newCellStyle == null){     
+	        newCellStyle = book.createCellStyle();     
+	        newCellStyle.cloneStyleFrom(oldCell.getCellStyle());     
+	        styleMap.put(stHashCode, newCellStyle);     
+	      }     
+	      newCell.setCellStyle(newCellStyle);   
+	    }
+		
+		switch(oldCell.getCellType()) {     
+		    case XSSFCell.CELL_TYPE_STRING:     
+		      newCell.setCellValue(oldCell.getRichStringCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_NUMERIC:     
+		      newCell.setCellValue(oldCell.getNumericCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BLANK:     
+		      newCell.setCellType(XSSFCell.CELL_TYPE_BLANK);     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BOOLEAN:     
+		      newCell.setCellValue(oldCell.getBooleanCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_ERROR:     
+		      newCell.setCellErrorValue(oldCell.getErrorCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_FORMULA:     
+		      newCell.setCellFormula(oldCell.getCellFormula());     
+		      break;     
+		    default:     
+		      break;     
+		  }
+		
+	}
+
+}
+
+******************************************************Latest Code End*************************************************************
+
+3 March:
+	  row = spreadsheet.createRow((short) 10 );
+      cell = (XSSFCell) row.createCell((short) 1);
+      
+      XSSFCellStyle style6 = workbook.createCellStyle();
+      style6.setFillBackgroundColor(HSSFColor.LEMON_CHIFFON.index );
+      style6.setFillPattern(XSSFCellStyle.LESS_DOTS);
+      style6.setAlignment(XSSFCellStyle.ALIGN_FILL);
+      spreadsheet.setColumnWidth(1,8000);
+      cell.setCellValue("FILL BACKGROUNG/FILL PATTERN");
+      cell.setCellStyle(style6);
+      
+*******************************************Completed Automation************************************************************
+package compare.excel;
+
+import java.awt.Color;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.swing.JOptionPane;
+
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+public class runComparer {
+	
+	public runComparer() {}
+
+	
+	//method to compare all excel file and excel sheets within them with each other
+	public void compare(File[] excelSheetsFilePath) throws IOException {
+		
+//		XSSFWorkbook final_workbook = new XSSFWorkbook(new FileInputStream("compared_output.xlsx"));
+		
+		
+		XSSFWorkbook book = new XSSFWorkbook(new FileInputStream("processing.xlsx"));
+				
+		for(File filePath : excelSheetsFilePath) {
+			
+			FileInputStream fIP = new FileInputStream(filePath);
+			XSSFWorkbook b = new XSSFWorkbook(fIP);
+			
+			System.out.println(filePath+": "+b.getNumberOfSheets());
+			
+			for (int i = 0; i < b.getNumberOfSheets(); i++) {
+				System.out.println(filePath+": "+b.getSheetName(i));
+				XSSFSheet sheet = book.createSheet(b.getSheetName(i));
+				copySheets(book, sheet, b.getSheetAt(i));
+			}
+		}
+		
+		XSSFSheet sheet_1 = book.getSheetAt(0);
+		
+		if(sheet_1 != null) {
+			int index = book.getSheetIndex(sheet_1);
+			book.removeSheetAt(index);
+		}
+		
+		FileOutputStream out = new FileOutputStream(new File("compared_result.xlsx"));
+		
+	    //write operation workbook using file out object
+		book.write(out);
+	    out.close();
+	    book.close();
+	    
+	    System.out.println("compared_result.xlsx written successfully");
+	    
+	    System.out.println("Starting to compare the sheets");
+	    
+	    XSSFWorkbook workbook_compare = new XSSFWorkbook(new FileInputStream("compared_result.xlsx"));
+	    
+	    XSSFCellStyle style = workbook_compare.createCellStyle();
+	    XSSFColor my_background=new XSSFColor(Color.GREEN);
+	    style.setFillForegroundColor(my_background);
+	    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	    
+	    XSSFSheet mainSheet = workbook_compare.getSheetAt(0);
+	    XSSFSheet checkSheet = null;
+	    
+	    for(int z = 1; z < workbook_compare.getNumberOfSheets(); z++) {
+	    	checkSheet = workbook_compare.getSheetAt(z);
+	    	compareDataInBothSheets(mainSheet, checkSheet, style);
+	    }
+	    
+	    System.out.println("Compare finish");
+	    
+	    System.out.println("Starting to save changes in compared_result.xlsx");
+	    
+	    FileOutputStream final_out = new FileOutputStream(new File("compared_result.xlsx"));
+	    workbook_compare.write(final_out);
+	    final_out.close();
+	    workbook_compare.close();
+	    
+	    JOptionPane.showMessageDialog(null, "Completed Successfully");
+	    
+	}
+
+	
+	private void compareDataInBothSheets(XSSFSheet srcSheetMain, XSSFSheet destSheetToCompare, CellStyle style) throws IOException {
+		
+		int maxRowNumberSrc = srcSheetMain.getLastRowNum() + 1;	
+				
+		for(int y = srcSheetMain.getFirstRowNum(); y <= maxRowNumberSrc; y++) {
+			//getting rows from src and destination
+			XSSFRow srcRowMain = srcSheetMain.getRow(y);
+						
+			if(srcRowMain != null) {
+				int firstCellNum = srcRowMain.getFirstCellNum();
+				int lastCellNum = srcRowMain.getLastCellNum();
+				
+				if(lastCellNum != -1) {
+					for(int c = firstCellNum; c <= lastCellNum; c++) {
+						XSSFCell srcCell = srcRowMain.getCell(c);
+						if(srcCell != null && srcCell.getStringCellValue() != "") {
+							String srcCellContent = srcCell.getStringCellValue();
+							checkContentInDestSheets(srcCellContent, destSheetToCompare, srcSheetMain, style);
+						}						
+					}
+				}
+			}
+			
+		}
+	}
+
+
+	private void checkContentInDestSheets(String srcCellContent, XSSFSheet destSheetToCompare, XSSFSheet srcSheetMain, CellStyle style) throws FileNotFoundException, IOException {
+		int maxRowNumberDest = destSheetToCompare.getLastRowNum()+1;
+		
+		for(int t = destSheetToCompare.getFirstRowNum(); t <= maxRowNumberDest; t++) {
+			XSSFRow destRowToCompare = destSheetToCompare.getRow(t);
+			
+			if(destRowToCompare != null) {
+				int firstCellDest = destRowToCompare.getFirstCellNum();
+				int lastCellNumDest = destRowToCompare.getLastCellNum();
+				
+				if(lastCellNumDest != -1) {
+					for(int b = firstCellDest; b <= lastCellNumDest; b++) {						
+						XSSFCell destCell = destRowToCompare.getCell(b);
+						if(destCell != null) {
+							String destCellContent = destCell.getStringCellValue();
+							if(srcCellContent.equals(destCellContent)) {
+								destCell.setCellStyle(style);
+							}					
+						}
+					}
+				}
+			}
+		}
+		
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet) {
+		copySheets(book, sheet, xssfSheet, true);
+	}
+
+
+	private static void copySheets(XSSFWorkbook book, XSSFSheet sheet, XSSFSheet xssfSheet, boolean copyStyle) {
+		int newRownumber = sheet.getLastRowNum() + 1;
+		int maxColumnNum = 0; 
+		Map<Integer, XSSFCellStyle> styleMap = (copyStyle) ? new HashMap<Integer, XSSFCellStyle>() : null;
+		
+		for (int i = xssfSheet.getFirstRowNum(); i <= xssfSheet.getLastRowNum(); i++) {     
+	      XSSFRow srcRow = xssfSheet.getRow(i);     
+	      XSSFRow destRow = sheet.createRow(i + newRownumber);     
+	      if (srcRow != null) {     
+	        copyRow(book, xssfSheet, sheet, srcRow, destRow, styleMap);     
+	        if (srcRow.getLastCellNum() > maxColumnNum) {     
+	            maxColumnNum = srcRow.getLastCellNum();     
+	        }     
+	      }     
+	    }
+		
+		for (int i = 0; i <= maxColumnNum; i++) {     
+	      sheet.setColumnWidth(i, xssfSheet.getColumnWidth(i));     
+	    }
+		
+	}
+
+
+	private static void copyRow(XSSFWorkbook book, XSSFSheet xssfSheet, XSSFSheet sheet, XSSFRow srcRow,
+			XSSFRow destRow, Map<Integer, XSSFCellStyle> styleMap) {
+		destRow.setHeight(srcRow.getHeight());
+		for (int j = srcRow.getFirstCellNum(); j <= srcRow.getLastCellNum(); j++) {     
+	      XSSFCell oldCell = srcRow.getCell(j);
+	      XSSFCell newCell = destRow.getCell(j);
+	      if (oldCell != null) {     
+	        if (newCell == null) {     
+	          newCell = destRow.createCell(j);     
+	        }     
+	        copyCell(book, oldCell, newCell, styleMap);
+	      }     
+	    }
+	}
+
+
+	@SuppressWarnings("deprecation")
+	private static void copyCell(XSSFWorkbook book, XSSFCell oldCell, XSSFCell newCell,
+			Map<Integer, XSSFCellStyle> styleMap) {
+		if(styleMap != null) {     
+	      int stHashCode = oldCell.getCellStyle().hashCode();     
+	      XSSFCellStyle newCellStyle = styleMap.get(stHashCode);     
+	      if(newCellStyle == null){     
+	        newCellStyle = book.createCellStyle();     
+	        newCellStyle.cloneStyleFrom(oldCell.getCellStyle());     
+	        styleMap.put(stHashCode, newCellStyle);     
+	      }     
+	      newCell.setCellStyle(newCellStyle);   
+	    }
+		
+		switch(oldCell.getCellType()) {     
+		    case XSSFCell.CELL_TYPE_STRING:     
+		      newCell.setCellValue(oldCell.getRichStringCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_NUMERIC:     
+		      newCell.setCellValue(oldCell.getNumericCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BLANK:     
+		      newCell.setCellType(XSSFCell.CELL_TYPE_BLANK);     
+		      break;     
+		    case XSSFCell.CELL_TYPE_BOOLEAN:     
+		      newCell.setCellValue(oldCell.getBooleanCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_ERROR:     
+		      newCell.setCellErrorValue(oldCell.getErrorCellValue());     
+		      break;     
+		    case XSSFCell.CELL_TYPE_FORMULA:     
+		      newCell.setCellFormula(oldCell.getCellFormula());     
+		      break;     
+		    default:     
+		      break;     
+		  }
+		
+	}
+
+}
+***************************************************************************************************************************************
+      
+		
+
